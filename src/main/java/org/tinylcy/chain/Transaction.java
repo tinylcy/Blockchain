@@ -52,4 +52,5 @@ public class Transaction implements Serializable {
                 ", amount=" + amount +
                 '}';
     }
+
 }

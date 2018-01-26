@@ -1,9 +1,5 @@
 package org.tinylcy.chain;
 
-import org.tinylcy.common.FastJsonUtils;
-import org.tinylcy.common.HashingUtils;
-
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,53 +8,35 @@ import java.util.List;
  */
 public class Blockchain {
 
-    private List<Block> chain;
-    private List<Transaction> currTransactions;
+    private List<Block> mainChain;
+    private List<List<Block>> backupChains;
 
     public Blockchain() {
-        this.chain = new ArrayList<Block>();
-        this.currTransactions = new ArrayList<Transaction>();
+        this.mainChain = new ArrayList<Block>();
 
-        /* Initialize genesis block. */
+        /* Initialize the genesis block. */
         Block genesis = new Block();
-        genesis.setIndex(0L);
-        genesis.setPrevHash("0");
+        genesis.setHeight(0);
+        genesis.setPrevBlockHash("0");
         genesis.setNonce(0L);
-        this.chain.add(genesis);
+        genesis.setMerkleRoot("0");
+        mainChain.add(genesis);
     }
 
-    public void acceptTransaction(Transaction transaction) {
-        currTransactions.add(transaction);
+    public List<Block> getMainChain() {
+        return mainChain;
     }
 
-    public Block createBlockWithoutNonce() {
-        Block block = new Block();
-        block.setIndex((long) chain.size());
-        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-        block.setTimestamp(timestamp.getTime());
-        block.setTransactions(currTransactions);
-        block.setPrevHash(HashingUtils.sha256(FastJsonUtils.getJsonString(chain.get(chain.size() - 1))));
-        return block;
+    public void setMainChain(List<Block> mainChain) {
+        this.mainChain = mainChain;
     }
 
-    public void appendBlock(Block block) {
-        chain.add(block);
-        currTransactions = new ArrayList<Transaction>(); // Empty current transaction list.
+    public List<List<Block>> getBackupChains() {
+        return backupChains;
     }
 
-    public List<Block> getChain() {
-        return chain;
+    public void setBackupChains(List<List<Block>> backupChains) {
+        this.backupChains = backupChains;
     }
 
-    public void setChain(List<Block> chain) {
-        this.chain = chain;
-    }
-
-    public List<Transaction> getCurrTransactions() {
-        return currTransactions;
-    }
-
-    public void setCurrTransactions(List<Transaction> currTransactions) {
-        this.currTransactions = currTransactions;
-    }
 }

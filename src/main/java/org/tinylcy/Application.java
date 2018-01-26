@@ -18,6 +18,7 @@ public class Application {
 
     @Bean
     public ObjectMapper objectMapper() {
+        // Serializing with Jackson (JSON) - getting "No serializer found"
         return new ObjectMapper().disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
     }
 }
