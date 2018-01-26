@@ -1,11 +1,13 @@
 package org.tinylcy.consensus.pow;
 
 import com.google.common.hash.Hashing;
+import org.apache.log4j.Logger;
 import org.tinylcy.chain.Block;
 import org.tinylcy.chain.Blockchain;
 import org.tinylcy.chain.Transaction;
 import org.tinylcy.common.FastJsonUtils;
 import org.tinylcy.common.HashingUtils;
+import org.tinylcy.network.Multicast;
 import org.tinylcy.network.Peer;
 
 import java.nio.charset.StandardCharsets;
@@ -18,18 +20,22 @@ import java.util.List;
  */
 public class PowMiner extends Peer {
 
+    private static final Logger LOGGER = Logger.getLogger(PowMiner.class);
+
     private Blockchain blockchain;
     private List<Transaction> transactions;
     private List<Transaction> unused;
 
     private PowMinerThread minerThread;
 
+    private Multicast multicast;
 
     public PowMiner(String ip, Integer port) {
         super(ip, port);
         this.blockchain = new Blockchain();
         this.transactions = new ArrayList<Transaction>();
         this.unused = new ArrayList<Transaction>();
+        this.multicast = new Multicast();
     }
 
     public void acceptTransaction(Transaction transaction) {
@@ -81,7 +87,7 @@ public class PowMiner extends Peer {
     public void mine() {
         minerThread = new PowMinerThread(this);
         minerThread.start();
-        System.out.println("Miner thread started...");
+        LOGGER.info("Miner thread started.");
     }
 
     public Long proofOfWork(Block block) {
@@ -91,7 +97,7 @@ public class PowMiner extends Peer {
         sha256 = Hashing.sha256().hashString(FastJsonUtils.getJsonString(block), StandardCharsets.UTF_8).toString();
         for (nonce = 0L; !isValidChain(sha256); nonce++) {
             sha256 = Hashing.sha256().hashString(FastJsonUtils.getJsonString(block) + nonce, StandardCharsets.UTF_8).toString();
-            // System.out.println("sha256: " + sha256 + ", nonce: " + nonce);
+            // LOGGER.info("sha256: " + sha256 + ", nonce: " + nonce);
         }
         return nonce;
     }
@@ -108,4 +114,11 @@ public class PowMiner extends Peer {
         minerThread.shutdown();
     }
 
+    public Multicast getMulticast() {
+        return multicast;
+    }
+
+    public void setMulticast(Multicast multicast) {
+        this.multicast = multicast;
+    }
 }

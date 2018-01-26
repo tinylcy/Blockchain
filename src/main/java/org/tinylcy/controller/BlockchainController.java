@@ -1,5 +1,6 @@
 package org.tinylcy.controller;
 
+import org.apache.log4j.Logger;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,6 +16,8 @@ import java.util.List;
  */
 @RestController
 public class BlockchainController {
+
+    private static final Logger LOGGER = Logger.getLogger(BlockchainController.class);
 
     private static PowMiner miner;
 
@@ -36,7 +39,7 @@ public class BlockchainController {
             throw new RuntimeException("The blockchain has not started yet, please start it first.");
         }
         miner.acceptTransaction(transaction);
-        System.out.println("New transaction: " + transaction);
+        LOGGER.info("New transaction: " + transaction);
     }
 
     @RequestMapping(value = "/chain", method = RequestMethod.GET)

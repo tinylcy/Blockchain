@@ -20,7 +20,7 @@ public class Multicast {
 
     public void send(byte[] bytes) {
         InetAddress group;
-        MulticastSocket socket;
+        MulticastSocket socket = null;
 
         try {
             group = InetAddress.getByName(Constants.MULTICAST_GROUP_ADDRESS);
@@ -32,12 +32,16 @@ public class Multicast {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
+        }finally {
+            if (null != socket) {
+                socket.close();
+            }
         }
     }
 
     public byte[] receive() {
         InetAddress group;
-        MulticastSocket socket;
+        MulticastSocket socket = null;
 
         byte[] buffer = new byte[2048];
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
@@ -56,6 +60,10 @@ public class Multicast {
             return data;
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            if (null != socket) {
+                socket.close();
+            }
         }
 
         return null;

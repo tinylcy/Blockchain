@@ -9,10 +9,12 @@ public class Message<T> implements Serializable {
 
     private Peer sender;
     private T data;
+    private MessageType type;
 
-    public Message(Peer sender, T data) {
+    public Message(Peer sender, T data, MessageType type) {
         this.sender = sender;
         this.data = data;
+        this.type = type;
     }
 
     public Peer getSender() {
@@ -31,4 +33,11 @@ public class Message<T> implements Serializable {
         this.data = data;
     }
 
+    public MessageType getType() {
+        return type;
+    }
+
+    public void setType(MessageType type) {
+        this.type = type;
+    }
 }
