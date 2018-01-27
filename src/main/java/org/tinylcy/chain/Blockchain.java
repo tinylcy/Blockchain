@@ -19,7 +19,12 @@ public class Blockchain {
         genesis.setPrevBlockHash("0");
         genesis.setNonce(0L);
         genesis.setMerkleRoot("0");
+        genesis.setHeight(0);
         mainChain.add(genesis);
+    }
+
+    public Block getLastBlock() {
+        return mainChain.get(mainChain.size() - 1);
     }
 
     public List<Block> getMainChain() {

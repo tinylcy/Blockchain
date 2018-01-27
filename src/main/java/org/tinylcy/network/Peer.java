@@ -6,17 +6,17 @@ package org.tinylcy.network;
 public class Peer {
 
     private String ip;
-    private Integer port;
     private String name;
 
-    public Peer(String ip, Integer port) {
-        this.ip = ip;
-        this.port = port;
+    public Peer() {
     }
 
-    public Peer(String ip, Integer port, String name ) {
+    public Peer(String ip) {
         this.ip = ip;
-        this.port = port;
+    }
+
+    public Peer(String ip, String name) {
+        this.ip = ip;
         this.name = name;
     }
 
@@ -26,14 +26,6 @@ public class Peer {
 
     public void setIp(String ip) {
         this.ip = ip;
-    }
-
-    public Integer getPort() {
-        return port;
-    }
-
-    public void setPort(Integer port) {
-        this.port = port;
     }
 
     public String getName() {
@@ -48,7 +40,6 @@ public class Peer {
     public String toString() {
         return "Peer{" +
                 "ip='" + ip + '\'' +
-                ", port=" + port +
                 ", name='" + name + '\'' +
                 '}';
     }

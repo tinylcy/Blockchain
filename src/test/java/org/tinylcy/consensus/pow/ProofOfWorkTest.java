@@ -14,7 +14,7 @@ public class ProofOfWorkTest {
     public void testProofOfWork() {
         Block block = new Block();
         block.setTimestamp(new Date().getTime());
-        PowMiner miner = new PowMiner("tinylcy1");
+        PowMiner miner = new PowMiner("tinylcy");
 
         Long nonce = miner.proofOfWork(block);
         System.out.println("Nonce = " + nonce);

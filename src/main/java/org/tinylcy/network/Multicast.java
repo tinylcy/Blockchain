@@ -8,7 +8,6 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /**
@@ -27,7 +26,6 @@ public class Multicast {
             socket = new MulticastSocket();
             socket.joinGroup(group);
             socket.send(new DatagramPacket(bytes, bytes.length, group, Constants.MULTICAST_GROUP_PORT));
-            LOGGER.info("Sent data: " + new String(bytes, StandardCharsets.UTF_8));
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -56,7 +54,6 @@ public class Multicast {
                 throw new RuntimeException("The data should not be larger then 1M.");
             }
             byte[] data = Arrays.copyOfRange(buffer, 0, packet.getLength());
-            LOGGER.info("Received data: " + new String(data, StandardCharsets.UTF_8));
             return data;
         } catch (IOException e) {
             e.printStackTrace();

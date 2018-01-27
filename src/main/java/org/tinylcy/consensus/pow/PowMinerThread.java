@@ -27,20 +27,28 @@ public class PowMinerThread extends Thread {
             Block block = miner.createBlockWithoutNonce();
             Long nonce = miner.proofOfWork(block);
             block.setNonce(nonce);
+
+            /**
+             * If a new block has been mined, append the block into its own blockchain,
+             * and then pack it as a message and multicast the message to peers.
+             **/
+            Message msg = new Message(null, block, MessageType.BLOCK);
             miner.appendBlock(block);
-
-            /* Multicast the block to other peers. */
-            byte [] bytes = FastJsonUtils.getJsonString(block).getBytes();
-
-            /* If a new block has been mined, pack it as a message and multicast the message to peers. */
-            Message msg = new Message(null, bytes, MessageType.BLOCK);
             miner.getMulticast().send(FastJsonUtils.getJsonString(msg).getBytes());
 
             LOGGER.info("Multicast a new block: " + msg.getData());
         }
     }
 
-    public void shutdown() {
+    public void stopMining() {
         isRunning = false;
+    }
+
+    public void startMining() {
+        isRunning = true;
+    }
+
+    public Boolean isRunning() {
+        return isRunning;
     }
 }

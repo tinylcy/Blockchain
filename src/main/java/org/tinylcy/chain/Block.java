@@ -12,6 +12,7 @@ public class Block implements Serializable {
     private Integer size;                        // Block size
     private Long timestamp;                      // Timestamp
     private Long nonce;                          // Nonce for Proof-of-Work
+    private Integer height;                         // Height
 
     /* Hashes */
     private String merkleRoot;                   // Merkle-Tree root's hash
@@ -32,6 +33,14 @@ public class Block implements Serializable {
         this.size = size;
     }
 
+    public Long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Long timestamp) {
+        this.timestamp = timestamp;
+    }
+
     public Long getNonce() {
         return nonce;
     }
@@ -40,12 +49,12 @@ public class Block implements Serializable {
         this.nonce = nonce;
     }
 
-    public Long getTimestamp() {
-        return timestamp;
+    public Integer getHeight() {
+        return height;
     }
 
-    public void setTimestamp(Long timestamp) {
-        this.timestamp = timestamp;
+    public void setHeight(Integer height) {
+        this.height = height;
     }
 
     public String getMerkleRoot() {
@@ -70,5 +79,18 @@ public class Block implements Serializable {
 
     public void setTransactions(List<Transaction> transactions) {
         this.transactions = transactions;
+    }
+
+    @Override
+    public String toString() {
+        return "Block{" +
+                "size=" + size +
+                ", timestamp=" + timestamp +
+                ", nonce=" + nonce +
+                ", height=" + height +
+                ", merkleRoot='" + merkleRoot + '\'' +
+                ", prevBlockHash='" + prevBlockHash + '\'' +
+                ", transactions=" + transactions +
+                '}';
     }
 }

@@ -35,18 +35,31 @@ public class PowListenerThread extends Thread {
 
             Message msg = FastJsonUtils.parseMessage(bytes);
 
-            if (msg.getType().equals(MessageType.BLOCK) && !msg.getSender().equals(miner.getOwner())) {
-                Block block = (Block) msg.getData();
+            if (msg.getType().equals(MessageType.BLOCK) &&
+                    msg.getSender() != null && !msg.getSender().getIp().equals(miner.getIp())) {
+                Block block = FastJsonUtils.parseObject(msg.getData().toString(), Block.class);
                 LOGGER.info("Received a block: " + block);
-            } else if (msg.getType().equals(MessageType.TRANSACTION)){
-                Transaction transaction = (Transaction) msg.getData();
+
+                /**
+                 * When a new block has been mined, maybe this block was mined by the miner itself
+                 * or by other peers, the miner should stop mining at first and then append this
+                 * newly-mined block into the blockchain.
+                 **/
+                miner.stopMining();
+                miner.appendBlock(block);
+                miner.restartMining();   // Start to mining the next block.
+
+            } else if (msg.getType().equals(MessageType.TRANSACTION)) {
+                Transaction transaction = FastJsonUtils.parseObject(msg.getData().toString(), Transaction.class);
                 miner.addTransactionIntoPool(transaction);
                 LOGGER.info("Received a transaction: " + transaction);
             } else {
-                LOGGER.warn("Received an invalid message: " + msg);
+                // LOGGER.warn("Received an invalid message: " + msg);
             }
         }
     }
 
-
+    public Boolean isRunning() {
+        return isRunning;
+    }
 }

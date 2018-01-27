@@ -15,4 +15,8 @@ public class FastJsonUtils {
     public static Message parseMessage(byte[] bytes) {
         return JSON.parseObject(bytes, Message.class);
     }
+
+    public static <T> T parseObject(String string, Class<T> clazz) {
+        return JSON.parseObject(string, clazz);
+    }
 }
