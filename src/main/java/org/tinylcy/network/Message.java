@@ -5,13 +5,16 @@ import java.io.Serializable;
 /**
  * Created by tinylcy.
  */
-public class Message<T> implements Serializable {
+public class Message implements Serializable {
 
     private Peer sender;
-    private T data;
+    private Object data;
     private MessageType type;
 
-    public Message(Peer sender, T data, MessageType type) {
+    public Message() {
+    }
+
+    public Message(Peer sender, Object data, MessageType type) {
         this.sender = sender;
         this.data = data;
         this.type = type;
@@ -25,11 +28,11 @@ public class Message<T> implements Serializable {
         this.sender = sender;
     }
 
-    public T getData() {
+    public Object getData() {
         return data;
     }
 
-    public void setData(T data) {
+    public void setData(Object data) {
         this.data = data;
     }
 
@@ -39,5 +42,14 @@ public class Message<T> implements Serializable {
 
     public void setType(MessageType type) {
         this.type = type;
+    }
+
+    @Override
+    public String toString() {
+        return "Message{" +
+                "sender=" + sender +
+                ", data=" + data +
+                ", type=" + type +
+                '}';
     }
 }

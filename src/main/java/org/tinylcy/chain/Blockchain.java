@@ -16,7 +16,6 @@ public class Blockchain {
 
         /* Initialize the genesis block. */
         Block genesis = new Block();
-        genesis.setHeight(0);
         genesis.setPrevBlockHash("0");
         genesis.setNonce(0L);
         genesis.setMerkleRoot("0");

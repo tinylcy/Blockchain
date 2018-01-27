@@ -7,6 +7,7 @@ import org.tinylcy.chain.Blockchain;
 import org.tinylcy.chain.Transaction;
 import org.tinylcy.common.FastJsonUtils;
 import org.tinylcy.common.HashingUtils;
+import org.tinylcy.config.Constants;
 import org.tinylcy.network.Multicast;
 import org.tinylcy.network.Peer;
 
@@ -14,32 +15,44 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Created by tinylcy.
  */
-public class PowMiner extends Peer {
+public class PowMiner {
 
     private static final Logger LOGGER = Logger.getLogger(PowMiner.class);
 
-    private Blockchain blockchain;
-    private List<Transaction> transactions;
-    private List<Transaction> unused;
+    private Peer owner;                         // Owner.
 
-    private PowMinerThread minerThread;
+    private Blockchain blockchain;                // A blockchain the current miner maintained.
+
+    private Queue<Transaction> transactionPool;   // A transaction pool for transactions to be confirmed.
+    private List<Transaction> currTransactions;   // Saved transactions in the current block.
 
     private Multicast multicast;
 
-    public PowMiner(String ip, Integer port) {
-        super(ip, port);
-        this.blockchain = new Blockchain();
-        this.transactions = new ArrayList<Transaction>();
-        this.unused = new ArrayList<Transaction>();
-        this.multicast = new Multicast();
+    private PowMinerThread minerThread;           // The thread for mining.
+    private PowListenerThread listenerThread;     // The thread for sending and receiving message in network.
+
+    public PowMiner(String name) {
+        this.owner = new Peer(Constants.OWNER_DEFAULT_IP, Constants.MULTICAST_GROUP_PORT);
+        this.owner.setName(name);
     }
 
-    public void acceptTransaction(Transaction transaction) {
-        transactions.add(transaction);
+    public PowMiner(String ip, Integer port, String name) {
+        this.owner = new Peer(ip, port, name);
+    }
+
+    public PowMiner(String ip, Integer port) {
+        this.owner = new Peer(ip, port);
+        this.blockchain = new Blockchain();
+        this.transactionPool = new LinkedBlockingQueue<Transaction>();
+        this.currTransactions = new ArrayList<Transaction>();
+
+        this.multicast = new Multicast();
     }
 
     public Block createBlockWithoutNonce() {
@@ -47,7 +60,7 @@ public class PowMiner extends Peer {
 
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
         block.setTimestamp(timestamp.getTime());
-        block.setTransactions(transactions);
+        block.setTransactions(currTransactions);
         block.setPrevBlockHash(HashingUtils.sha256(
                 FastJsonUtils.getJsonString(
                         blockchain.getMainChain().get(blockchain.getMainChain().size() - 1))));
@@ -58,11 +71,7 @@ public class PowMiner extends Peer {
         Integer length = blockchain.getMainChain().size();
         // TODO
         blockchain.getMainChain().add(block);
-        transactions = new ArrayList<Transaction>(); // Empty current transaction list.
-    }
-
-    public void registerNeighbour(Peer neighbour) {
-
+        currTransactions = new ArrayList<Transaction>(); // Empty current transaction list.
     }
 
     public Boolean validateChain() {
@@ -79,15 +88,21 @@ public class PowMiner extends Peer {
         return true;
     }
 
+    public void addTransactionIntoPool(Transaction transaction) {
+        transactionPool.add(transaction);
+    }
+
     public void resolveConflicts() {
         Integer maxChainLen = blockchain.getMainChain().size();
 
     }
 
     public void mine() {
-        minerThread = new PowMinerThread(this);
+        minerThread = new PowMinerThread(this);           // Create a miner thread.
+        listenerThread = new PowListenerThread(this);     // Create a listener thread.
         minerThread.start();
-        LOGGER.info("Miner thread started.");
+        listenerThread.start();
+        LOGGER.info("Miner thread and listener thread started.");
     }
 
     public Long proofOfWork(Block block) {
@@ -97,13 +112,14 @@ public class PowMiner extends Peer {
         sha256 = Hashing.sha256().hashString(FastJsonUtils.getJsonString(block), StandardCharsets.UTF_8).toString();
         for (nonce = 0L; !isValidChain(sha256); nonce++) {
             sha256 = Hashing.sha256().hashString(FastJsonUtils.getJsonString(block) + nonce, StandardCharsets.UTF_8).toString();
-            // LOGGER.info("sha256: " + sha256 + ", nonce: " + nonce);
+            sha256 = Hashing.sha256().hashString(sha256, StandardCharsets.UTF_8).toString();
         }
+
         return nonce;
     }
 
     private Boolean isValidChain(String proof) {
-        return proof.startsWith("00000");
+        return proof.startsWith("000000");
     }
 
     public List<Block> getMainChain() {
@@ -112,6 +128,58 @@ public class PowMiner extends Peer {
 
     public void shutdown() {
         minerThread.shutdown();
+    }
+
+    /*************
+     * get/set
+     ****************/
+
+    public Peer getOwner() {
+        return owner;
+    }
+
+    public void setOwner(Peer owner) {
+        this.owner = owner;
+    }
+
+    public Blockchain getBlockchain() {
+        return blockchain;
+    }
+
+    public void setBlockchain(Blockchain blockchain) {
+        this.blockchain = blockchain;
+    }
+
+    public Queue<Transaction> getTransactionPool() {
+        return transactionPool;
+    }
+
+    public void setTransactionPool(Queue<Transaction> transactionPool) {
+        this.transactionPool = transactionPool;
+    }
+
+    public PowMinerThread getMinerThread() {
+        return minerThread;
+    }
+
+    public void setMinerThread(PowMinerThread minerThread) {
+        this.minerThread = minerThread;
+    }
+
+    public PowListenerThread getListenerThread() {
+        return listenerThread;
+    }
+
+    public void setListenerThread(PowListenerThread listenerThread) {
+        this.listenerThread = listenerThread;
+    }
+
+    public List<Transaction> getCurrTransactions() {
+        return currTransactions;
+    }
+
+    public void setCurrTransactions(List<Transaction> currTransactions) {
+        this.currTransactions = currTransactions;
     }
 
     public Multicast getMulticast() {

@@ -9,59 +9,19 @@ import java.util.List;
 public class Block implements Serializable {
 
     /* Summary */
-    private Long timestamp;
-    private List<Transaction> transactions;
-    private Long nonce;
-    private String merkleRoot;
-    private Integer height;
-    private Integer size;
+    private Integer size;                        // Block size
+    private Long timestamp;                      // Timestamp
+    private Long nonce;                          // Nonce for Proof-of-Work
 
     /* Hashes */
-    private String hash;
-    private String prevBlockHash;
-    private String nextBlockHash;
+    private String merkleRoot;                   // Merkle-Tree root's hash
+    private String prevBlockHash;                // The previous block's hash
+
+    /* Transactions */
+    private List<Transaction> transactions;      // Transactions
 
     public Block() {
-    }
-
-    public Long getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(Long timestamp) {
-        this.timestamp = timestamp;
-    }
-
-    public List<Transaction> getTransactions() {
-        return transactions;
-    }
-
-    public void setTransactions(List<Transaction> transactions) {
-        this.transactions = transactions;
-    }
-
-    public Long getNonce() {
-        return nonce;
-    }
-
-    public void setNonce(Long nonce) {
-        this.nonce = nonce;
-    }
-
-    public String getMerkleRoot() {
-        return merkleRoot;
-    }
-
-    public void setMerkleRoot(String merkleRoot) {
-        this.merkleRoot = merkleRoot;
-    }
-
-    public Integer getHeight() {
-        return height;
-    }
-
-    public void setHeight(Integer height) {
-        this.height = height;
+        this.nonce = 0L;
     }
 
     public Integer getSize() {
@@ -72,12 +32,28 @@ public class Block implements Serializable {
         this.size = size;
     }
 
-    public String getHash() {
-        return hash;
+    public Long getNonce() {
+        return nonce;
     }
 
-    public void setHash(String hash) {
-        this.hash = hash;
+    public void setNonce(Long nonce) {
+        this.nonce = nonce;
+    }
+
+    public Long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Long timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public String getMerkleRoot() {
+        return merkleRoot;
+    }
+
+    public void setMerkleRoot(String merkleRoot) {
+        this.merkleRoot = merkleRoot;
     }
 
     public String getPrevBlockHash() {
@@ -88,11 +64,11 @@ public class Block implements Serializable {
         this.prevBlockHash = prevBlockHash;
     }
 
-    public String getNextBlockHash() {
-        return nextBlockHash;
+    public List<Transaction> getTransactions() {
+        return transactions;
     }
 
-    public void setNextBlockHash(String nextBlockHash) {
-        this.nextBlockHash = nextBlockHash;
+    public void setTransactions(List<Transaction> transactions) {
+        this.transactions = transactions;
     }
 }
