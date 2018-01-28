@@ -9,6 +9,8 @@ import org.tinylcy.common.FastJsonUtils;
 import org.tinylcy.common.HashingUtils;
 import org.tinylcy.common.InetAddressUtils;
 import org.tinylcy.config.Constants;
+import org.tinylcy.network.Message;
+import org.tinylcy.network.MessageType;
 import org.tinylcy.network.Multicast;
 import org.tinylcy.network.Peer;
 
@@ -25,8 +27,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class PowMiner extends Peer {
 
     private static final Logger LOGGER = Logger.getLogger(PowMiner.class);
-
-    // private Peer owner;                           // Owner.
 
     private Blockchain blockchain;                // A blockchain the current miner maintained.
 
@@ -67,16 +67,27 @@ public class PowMiner extends Peer {
         Integer length = blockchain.getMainChain().size();
         String sha265 = HashingUtils.sha256(blockchain.getLastBlock());
 
-        // Try to append the newly-mined block into the main blockchain.
-        if (length == 1 || sha265.equals(block.getPrevBlockHash())) {
+        /**
+         * Try to append the newly-mined block into the main blockchain.
+         */
+        if (sha265.equals(block.getPrevBlockHash())) {
             blockchain.getMainChain().add(block);
             currTransactions = new ArrayList<Transaction>(); // Empty current transaction list.
             LOGGER.info("A new block have been appended after the main blockchain.");
             return;
         }
 
-        LOGGER.warn("A new mined block can not be appended into the blockchain.");
+        /**
+         * If the newly-mined block can not be appended after the current blockchain,
+         * multicast a chain-request message to get longer blockchain from other peers.
+         */
+        Message chainRequestMsg = new Message(owner(), null, MessageType.CHAIN_REQUEST);
+        multicast.send(FastJsonUtils.getJsonString(chainRequestMsg).getBytes());
+        LOGGER.info("Sent blockchain request message.");
+    }
 
+    public synchronized void replaceMainChain(List<Block> chain) {
+        blockchain.setMainChain(chain);
     }
 
     public Boolean validateChain() {
@@ -135,7 +146,7 @@ public class PowMiner extends Peer {
     }
 
     private Boolean isValidChain(String proof) {
-        return proof.startsWith("00000");
+        return proof.startsWith("000000");
     }
 
     public List<Block> getMainChain() {
@@ -148,6 +159,14 @@ public class PowMiner extends Peer {
 
     public void restartMining() {
         minerThread.startMining();
+    }
+
+    public Peer owner() {
+        return new Peer(getIp(), getName());
+    }
+
+    public Integer chainSize() {
+        return blockchain.getMainChain().size();
     }
 
     /*******************************************

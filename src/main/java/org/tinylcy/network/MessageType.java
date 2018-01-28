@@ -4,5 +4,8 @@ package org.tinylcy.network;
  * Created by tinylcy.
  */
 public enum MessageType {
-    TRANSACTION, BLOCK;
+    TRANSACTION,
+    BLOCK,
+    CHAIN_REQUEST,
+    CHAIN_RESPONSE;
 }

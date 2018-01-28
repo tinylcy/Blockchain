@@ -12,4 +12,6 @@ public class Constants {
 
     public static final Integer MAX_TRANSACTION_NUM_PER_BLOCK = 4000;
 
+    public static final Integer MULTICAST_TIMEOUT = 1000;
+
 }

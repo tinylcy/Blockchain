@@ -1,5 +1,7 @@
 package org.tinylcy.consensus.pow;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import org.apache.log4j.Logger;
 import org.tinylcy.chain.Block;
 import org.tinylcy.chain.Transaction;
@@ -7,6 +9,9 @@ import org.tinylcy.common.FastJsonUtils;
 import org.tinylcy.network.Message;
 import org.tinylcy.network.MessageType;
 import org.tinylcy.network.Multicast;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by tinylcy.
@@ -53,9 +58,28 @@ public class PowListenerThread extends Thread {
                 Transaction transaction = FastJsonUtils.parseObject(msg.getData().toString(), Transaction.class);
                 miner.addTransactionIntoPool(transaction);
                 LOGGER.info("Received a transaction: " + transaction);
+
+            } else if (msg.getType().equals(MessageType.CHAIN_REQUEST) && !msg.getSender().getIp().equals(miner.getIp())) {
+                Message response = new Message(miner.owner(), miner.getMainChain(), MessageType.CHAIN_RESPONSE);
+                multicast.send(FastJsonUtils.getJsonString(response).getBytes());
+                LOGGER.info("Multicast main chain to other peers.");
+
+            } else if (msg.getType().equals(MessageType.CHAIN_RESPONSE) && !msg.getSender().getIp().equals(miner.getIp())) {
+                JSONArray array = JSON.parseArray(msg.getData().toString());
+                if (array.size() <= miner.chainSize()) {
+                    return;
+                }
+                List<Block> chain = new ArrayList<Block>(array.size());
+                for (Object elem : array) {
+                    chain.add(FastJsonUtils.parseObject(elem.toString(), Block.class));
+                }
+                miner.replaceMainChain(chain);
+                // TODO replace the current main blockchain
+
             } else {
-                // LOGGER.warn("Received an invalid message: " + msg);
+                // TODO
             }
+
         }
     }
 

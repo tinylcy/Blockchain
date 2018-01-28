@@ -32,7 +32,7 @@ public class PowMinerThread extends Thread {
              * If a new block has been mined, append the block into its own blockchain,
              * and then pack it as a message and multicast the message to peers.
              **/
-            Message msg = new Message(null, block, MessageType.BLOCK);
+            Message msg = new Message(miner.owner(), block, MessageType.BLOCK);
             miner.appendBlock(block);
             miner.getMulticast().send(FastJsonUtils.getJsonString(msg).getBytes());
 

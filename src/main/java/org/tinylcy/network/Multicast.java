@@ -30,7 +30,7 @@ public class Multicast {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             if (null != socket) {
                 socket.close();
             }
@@ -50,9 +50,9 @@ public class Multicast {
 
             socket.receive(packet);
 
-            if (packet.getLength() > 1024) {
-                throw new RuntimeException("The data should not be larger then 1M.");
-            }
+//            if (packet.getLength() > 1024) {
+//                throw new RuntimeException("The data should not be larger then 1M.");
+//            }
             byte[] data = Arrays.copyOfRange(buffer, 0, packet.getLength());
             return data;
         } catch (IOException e) {

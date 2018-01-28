@@ -12,7 +12,7 @@ public class Block implements Serializable {
     private Integer size;                        // Block size
     private Long timestamp;                      // Timestamp
     private Long nonce;                          // Nonce for Proof-of-Work
-    private Integer height;                         // Height
+    private Integer height;                      // Height
 
     /* Hashes */
     private String merkleRoot;                   // Merkle-Tree root's hash
