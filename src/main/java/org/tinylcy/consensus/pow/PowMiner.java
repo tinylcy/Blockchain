@@ -82,16 +82,17 @@ public class PowMiner extends Peer {
     }
 
     public synchronized void appendBlock(Block block, Peer blockSrcPeer) {
-        String sha265 = HashingUtils.sha256(blockchain.getLastBlock());
-
+        /**
+         * Before appending the newly-mined block into blockchain,
+         * the mining thread should be stopped at first.
+         */
         blockMiner.stopMining();
 
         /**
-         * Try to append the newly-mined block into the main blockchain.
+         * Try to append the newly-mined block into the blockchain,
+         * including main chain and backup chains.
          */
-        if (sha265.equals(block.getPrevBlockHash())) {
-            blockchain.getMainChain().add(block);
-            currTransactions = new ArrayList<Transaction>(); // Empty current transaction list.
+        if (blockchain.appendBlock(block)) {
             blockMiner.startMining();
             return;
         }
@@ -206,6 +207,10 @@ public class PowMiner extends Peer {
 
     public Boolean isGenesisMiner() {
         return genesisMiner;
+    }
+
+    public List<List<Block>> getBackupChains() {
+        return blockchain.getBackupChains();
     }
 
     /*******************************************

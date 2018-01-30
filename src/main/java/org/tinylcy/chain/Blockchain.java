@@ -1,6 +1,10 @@
 package org.tinylcy.chain;
 
+import org.apache.log4j.Logger;
+import org.tinylcy.common.HashingUtils;
+
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -8,11 +12,14 @@ import java.util.List;
  */
 public class Blockchain {
 
+    private static final Logger LOGGER = Logger.getLogger(Blockchain.class);
+
     private List<Block> mainChain;
     private List<List<Block>> backupChains;
 
     public Blockchain() {
         this.mainChain = new ArrayList<Block>();
+        this.backupChains = new ArrayList<List<Block>>();
 
         /* Initialize the genesis block. */
         Block genesis = new Block();
@@ -23,9 +30,92 @@ public class Blockchain {
         mainChain.add(genesis);
     }
 
+    /**
+     * Append the newly-mined block after/into main chain or backup chains.
+     * If appended, return {true}.
+     * If no where to append, return {false}
+     *
+     * @param block
+     * @return
+     */
+    public Boolean appendBlock(Block block) {
+        String sha256 = HashingUtils.sha256(getLastBlock());
+
+        // Try to append after the main chain.
+        if (sha256.equals(block.getPrevBlockHash())) {
+            mainChain.add(block);
+            return true;
+        }
+
+        // Try to append after one of the backup chain.
+        if (appendAfterBackupChain(block)) {
+            return true;
+        }
+
+        // Try to append into the main chain, which will create a backup chain.
+        if (appendIntoMainChain(block)) {
+            return true;
+        }
+
+        // Remove the out of date chain.
+        Iterator<List<Block>> iterator = backupChains.iterator();
+        while (iterator.hasNext()) {
+            List<Block> backupChain = iterator.next();
+            if (mainChain.size() - backupChain.size() > 5) {
+                iterator.remove();
+            }
+        }
+
+        return false;
+    }
+
+    private Boolean appendAfterBackupChain(Block block) {
+        for (List<Block> backupChain : backupChains) {
+            Block lastBlock = backupChain.get(backupChain.size() - 1);
+            String sha256 = HashingUtils.sha256(lastBlock);
+            if (sha256.equals(block.getPrevBlockHash())) {
+                backupChain.add(block);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Boolean appendIntoMainChain(Block block) {
+        Integer length = mainChain.size();
+        for (int i = length - 2; i > 0; i--) {
+            Block prevBlock = mainChain.get(i);
+            String sha256 = HashingUtils.sha256(prevBlock);
+            if (sha256.equals(block.getPrevBlockHash())) {
+                List<Block> backupChain = createBackupChain(prevBlock);
+                backupChain.add(block);
+                if (backupChain.size() > mainChain.size()) {
+                    List<Block> tmp = mainChain;
+                    mainChain = backupChain;
+                    backupChain = tmp;
+                }
+                backupChains.add(backupChain);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private List<Block> createBackupChain(Block prevBlock) {
+        List<Block> backupChain = new ArrayList<Block>();
+        for (Block block : mainChain) {
+            if (prevBlock == block) {
+                break;
+            }
+            backupChain.add(block);
+        }
+        backupChain.add(prevBlock);
+        return backupChain;
+    }
+
     public void replaceMainChain(List<Block> chain) {
         mainChain = new ArrayList<Block>(chain.size());
-        for(Block block: chain) {
+        for (Block block : chain) {
             mainChain.add(block);
         }
     }
