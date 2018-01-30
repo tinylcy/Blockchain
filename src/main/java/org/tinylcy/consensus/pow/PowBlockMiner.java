@@ -44,7 +44,6 @@ public class PowBlockMiner extends Thread {
              **/
             Message msg = new Message(miner.owner(), block, MessageType.BLOCK);
             miner.appendBlock(block, miner.owner());
-//            miner.getMulticast().send(FastJsonUtils.getJsonString(msg).getBytes());
             for (Peer peer : miner.getPeers()) {
                 if (peer.getIp().equals(InetAddressUtils.getIP())) {
                     continue;
@@ -56,12 +55,12 @@ public class PowBlockMiner extends Thread {
 
     public void stopMining() {
         isRunning = false;
-        LOGGER.info("The mining thread stopped.");
+        LOGGER.info(InetAddressUtils.getIP() + " - The block mining thread stopped.");
     }
 
     public void startMining() {
         isRunning = true;
-        LOGGER.info("The mining thread started.");
+        LOGGER.info(InetAddressUtils.getIP() + " - The block mining thread started.");
     }
 
     public Boolean isRunning() {

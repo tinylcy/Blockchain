@@ -6,10 +6,12 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.tinylcy.chain.Block;
+import org.tinylcy.common.HashingUtils;
 import org.tinylcy.config.Constants;
 import org.tinylcy.consensus.pow.PowMiner;
 import org.tinylcy.network.Peer;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -44,8 +46,12 @@ public class MinerController {
     }
 
     @RequestMapping(value = "/chain", method = RequestMethod.GET)
-    public List<Block> chain() {
-        return miner.getMainChain();
+    public List<BlockWrapper> chain() {
+        List<BlockWrapper> list = new ArrayList<BlockWrapper>();
+        for(Block block : miner.getMainChain()) {
+            list.add(new BlockWrapper(HashingUtils.sha256(block), block.getPrevBlockHash()));
+        }
+        return list;
     }
 
     @RequestMapping(value = "/valid", method = RequestMethod.GET)
@@ -58,4 +64,29 @@ public class MinerController {
         miner.stopMining();
     }
 
+    static class BlockWrapper {
+        private String hash;
+        private String prevHash;
+
+        public BlockWrapper(String hash, String prevHash) {
+            this.hash = hash;
+            this.prevHash = prevHash;
+        }
+
+        public String getHash() {
+            return hash;
+        }
+
+        public void setHash(String hash) {
+            this.hash = hash;
+        }
+
+        public String getPrevHash() {
+            return prevHash;
+        }
+
+        public void setPrevHash(String prevHash) {
+            this.prevHash = prevHash;
+        }
+    }
 }

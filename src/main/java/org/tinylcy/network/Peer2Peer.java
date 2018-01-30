@@ -1,5 +1,8 @@
 package org.tinylcy.network;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.log4j.Logger;
+import org.tinylcy.common.InetAddressUtils;
 import org.tinylcy.config.Constants;
 
 import java.io.IOException;
@@ -12,6 +15,8 @@ import java.net.Socket;
  * Created by tinylcy.
  */
 public class Peer2Peer {
+
+    private static final Logger LOGGER = Logger.getLogger(Peer2Peer.class);
 
     private ServerSocket serverSocket;
 
@@ -31,10 +36,10 @@ public class Peer2Peer {
             output = new ObjectOutputStream(socket.getOutputStream());
             output.writeObject(msg);
         } catch (IOException e) {
-            // TODO
-            System.err.println("Can not establish a connection with: " + server);
+            LOGGER.warn(InetAddressUtils.getIP() + " - Can not establish a connection with: " + server);
         } finally {
-            close(null, output, socket);
+            IOUtils.closeQuietly(socket);
+            IOUtils.closeQuietly(output);
         }
     }
 
@@ -52,26 +57,11 @@ public class Peer2Peer {
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         } finally {
-            close(input, null, client);
+            IOUtils.closeQuietly(client);
+            IOUtils.closeQuietly(input);
         }
 
         return msg;
-    }
-
-    private void close(ObjectInputStream input, ObjectOutputStream output, Socket socket) {
-        try {
-            if (input != null) {
-                input.close();
-            }
-            if (output != null) {
-                output.close();
-            }
-            if (socket != null) {
-                socket.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
 }

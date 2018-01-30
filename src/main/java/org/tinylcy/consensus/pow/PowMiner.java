@@ -5,6 +5,7 @@ import org.apache.log4j.Logger;
 import org.tinylcy.chain.Block;
 import org.tinylcy.chain.Blockchain;
 import org.tinylcy.chain.Transaction;
+import org.tinylcy.common.ConfigurationUtils;
 import org.tinylcy.common.FastJsonUtils;
 import org.tinylcy.common.HashingUtils;
 import org.tinylcy.common.InetAddressUtils;
@@ -25,21 +26,21 @@ public class PowMiner extends Peer {
 
     private static final Logger LOGGER = Logger.getLogger(PowMiner.class);
 
-    private Blockchain blockchain;                // A blockchain the current miner maintained.
+    private Blockchain blockchain;                 // A blockchain the current miner maintained.
 
-    private Queue<Transaction> transactionPool;   // A transaction pool for transactions to be confirmed.
-    private List<Transaction> currTransactions;   // Saved transactions in the current block.
+    private Queue<Transaction> transactionPool;    // A transaction pool for transactions to be confirmed.
+    private List<Transaction> currTransactions;    // Saved transactions in the current block.
 
-    private List<Peer> peers;
+    private List<Peer> peers;                      // The connected peers in the network, now we should set it manually.
 
-    private Multicast multicast;
-    private Peer2Peer peer2Peer;
+    private Multicast multicast;                   // Network module.
+    private Peer2Peer peer2Peer;                   // Network module.
 
-    private PowBlockMiner blockMiner;           // The thread for mining.
-    private PowMessageListener msgListener;     // The thread for sending and receiving message in network.
-    private PowTransactionListener transListenr;
+    private PowBlockMiner blockMiner;              // The thread for mining block.
+    private PowMessageListener msgListener;        // The thread for sending and receiving message (BLOCK, CHAIN_REQUEST and CHAIN_RESPONSE).
+    private PowTransactionListener transListener;  // The thread for receiving transactions.
 
-    private Boolean genesisMiner;
+    private Boolean genesisMiner;                  // Mark the first miner in blockchain network.
 
     public PowMiner() {
         this(InetAddressUtils.getIP(), Constants.MINER_DEFAULT_TCP_PORT);
@@ -60,13 +61,12 @@ public class PowMiner extends Peer {
         this.multicast = new Multicast();
         this.peer2Peer = new Peer2Peer();
 
-        // TODO
-        this.peers = Constants.mockPeers();
+        this.peers = ConfigurationUtils.peers();
 
         /* Restart the miner thread and the listener thread */
         blockMiner = new PowBlockMiner(this);           // Create a miner thread.
         msgListener = new PowMessageListener(this);     // Create a listener thread.
-        transListenr = new PowTransactionListener(this);
+        transListener = new PowTransactionListener(this);
     }
 
     public synchronized Block createBlockWithoutNonce() {
@@ -82,12 +82,9 @@ public class PowMiner extends Peer {
     }
 
     public synchronized void appendBlock(Block block, Peer blockSrcPeer) {
-        Integer length = blockchain.getMainChain().size();
         String sha265 = HashingUtils.sha256(blockchain.getLastBlock());
 
         blockMiner.stopMining();
-
-        printMainChain(block);
 
         /**
          * Try to append the newly-mined block into the main blockchain.
@@ -96,7 +93,6 @@ public class PowMiner extends Peer {
             blockchain.getMainChain().add(block);
             currTransactions = new ArrayList<Transaction>(); // Empty current transaction list.
             blockMiner.startMining();
-            LOGGER.info(InetAddressUtils.getIP() + " - A new block have been appended after the main blockchain.");
             return;
         }
 
@@ -109,18 +105,15 @@ public class PowMiner extends Peer {
 
     public synchronized void replaceMainChain(List<Block> chain) {
         blockchain.replaceMainChain(chain);
-        System.err.println(InetAddressUtils.getIP() + " Finish sync blockchain.");
-        for (int i = 0; i < blockchain.getMainChain().size(); i++) {
-            System.err.println(i + " - " + HashingUtils.sha256(blockchain.getMainChain().get(i)));
-        }
+        LOGGER.info(InetAddressUtils.getIP() + " - Finished sync main chain.");
     }
 
     public Boolean validateChain() {
         if (blockchain.getMainChain().size() == 0) {
             return true;
         }
-        Integer index;
-        for (index = 1; index < blockchain.getMainChain().size(); index++) {
+
+        for (int index = 1; index < blockchain.getMainChain().size(); index++) {
             String prevHash = HashingUtils.sha256(FastJsonUtils.getJsonString(blockchain.getMainChain().get(index - 1)));
             if (!prevHash.equals(blockchain.getMainChain().get(index).getPrevBlockHash())) {
                 return false;
@@ -135,15 +128,14 @@ public class PowMiner extends Peer {
 
     public void syncMainChain(Peer syncPeer) {
         Message syncMsg = new Message(owner(), null, MessageType.CHAIN_REQUEST);
-//        multicast.send(FastJsonUtils.getJsonString(syncMsg).getBytes());
+        LOGGER.info(InetAddressUtils.getIP() + " - Sent main chain sync message.");
         peer2Peer.send(FastJsonUtils.getJsonString(syncMsg), syncPeer);
-        LOGGER.info(InetAddressUtils.getIP() + " - Sent blockchain sync message.");
     }
 
     public void init() {
         blockMiner.start();
         msgListener.start();
-        transListenr.start();
+        transListener.start();
     }
 
     public Long proofOfWork(Block block) {
@@ -153,7 +145,7 @@ public class PowMiner extends Peer {
         sha256 = Hashing.sha256().hashString(FastJsonUtils.getJsonString(block), StandardCharsets.UTF_8).toString();
         for (nonce = 0L; !isValidChain(sha256); nonce++) {
             if (!blockMiner.isRunning()) {
-                System.err.println(InetAddressUtils.getIP() + " - Abort mining.");
+                LOGGER.info(InetAddressUtils.getIP() + " - Abort mining.");
                 return -1L;
             }
             sha256 = Hashing.sha256().hashString(FastJsonUtils.getJsonString(block) + nonce, StandardCharsets.UTF_8).toString();
@@ -199,8 +191,8 @@ public class PowMiner extends Peer {
     }
 
     public void startTransListening() {
-        if (transListenr != null && !transListenr.isRunning()) {
-            transListenr.startListening();
+        if (transListener != null && !transListener.isRunning()) {
+            transListener.startListening();
         }
     }
 
@@ -210,17 +202,6 @@ public class PowMiner extends Peer {
 
     public Integer chainSize() {
         return blockchain.getMainChain().size();
-    }
-
-    private void printMainChain(Block block) {
-        System.err.println("---------------- current blockchain hash value -----------------");
-        for (int i = 0; i < blockchain.getMainChain().size(); i++) {
-            System.err.println(i + " - " + HashingUtils.sha256(blockchain.getMainChain().get(i)));
-        }
-        System.err.println("--------------------------------------------------------------------------------");
-        System.err.println("------- current block hash: " + HashingUtils.sha256(block) + " -------");
-        System.err.println("------- current block previous hash: " + block.getPrevBlockHash() + " -------");
-        System.err.println("--------------------------------------------------------------------------------\n");
     }
 
     public Boolean isGenesisMiner() {
@@ -256,12 +237,12 @@ public class PowMiner extends Peer {
         this.msgListener = msgListener;
     }
 
-    public PowTransactionListener getTransListenr() {
-        return transListenr;
+    public PowTransactionListener getTransListener() {
+        return transListener;
     }
 
-    public void setTransListenr(PowTransactionListener transListenr) {
-        this.transListenr = transListenr;
+    public void setTransListener(PowTransactionListener transListener) {
+        this.transListener = transListener;
     }
 
     public PowBlockMiner getBlockMiner() {

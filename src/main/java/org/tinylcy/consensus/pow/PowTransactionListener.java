@@ -3,6 +3,7 @@ package org.tinylcy.consensus.pow;
 import org.apache.log4j.Logger;
 import org.tinylcy.chain.Transaction;
 import org.tinylcy.common.FastJsonUtils;
+import org.tinylcy.common.InetAddressUtils;
 import org.tinylcy.network.Message;
 import org.tinylcy.network.MessageType;
 
@@ -36,9 +37,9 @@ public class PowTransactionListener extends Thread {
             Transaction transaction = FastJsonUtils.parseObject(msg.getData().toString(), Transaction.class);
             if (checkTransaction(transaction)) {
                 miner.addTransactionIntoPool(transaction);
-                LOGGER.info("Received a valid transaction: " + transaction);
+                LOGGER.info(InetAddressUtils.getIP() + " - Received a valid transaction: " + transaction);
             } else {
-                LOGGER.info("Received an invalid transaction: " + transaction);
+                LOGGER.info(InetAddressUtils.getIP() + " - Received an invalid transaction: " + transaction);
             }
         }
     }
@@ -50,7 +51,7 @@ public class PowTransactionListener extends Thread {
 
     public void startListening() {
         isRunning = true;
-        LOGGER.info("The transaction listening thread started.");
+        LOGGER.info(InetAddressUtils.getIP() + " - The transaction listening thread started.");
     }
 
     public Boolean isRunning() {
