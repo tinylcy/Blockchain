@@ -9,10 +9,7 @@ import org.tinylcy.chain.Transaction;
 import org.tinylcy.common.FastJsonUtils;
 import org.tinylcy.common.InetAddressUtils;
 import org.tinylcy.config.Constants;
-import org.tinylcy.network.Message;
-import org.tinylcy.network.MessageType;
-import org.tinylcy.network.Multicast;
-import org.tinylcy.network.Peer;
+import org.tinylcy.network.*;
 
 /**
  * Created by tinylcy.
@@ -33,7 +30,7 @@ public class WalletController {
                                @RequestParam("amount") Double amount) {
 
         Transaction transaction = new Transaction(sender, recipient, amount);
-        Peer owner = new Peer(InetAddressUtils.getIP(), Constants.OWNER_DEFAULT_NAME);
+        Peer owner = new Peer(InetAddressUtils.getIP(), Constants.MINER_DEFAULT_TCP_PORT);
         Message msg = new Message(owner, transaction, MessageType.TRANSACTION);  // Construct a transaction type message.
         multicast.send(FastJsonUtils.getJsonString(msg).getBytes());
 

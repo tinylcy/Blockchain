@@ -11,8 +11,8 @@ import org.tinylcy.common.InetAddressUtils;
 import org.tinylcy.config.Constants;
 import org.tinylcy.network.Message;
 import org.tinylcy.network.MessageType;
-import org.tinylcy.network.Multicast;
 import org.tinylcy.network.Peer;
+import org.tinylcy.network.Peer2Peer;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
@@ -33,25 +33,44 @@ public class PowMiner extends Peer {
     private Queue<Transaction> transactionPool;   // A transaction pool for transactions to be confirmed.
     private List<Transaction> currTransactions;   // Saved transactions in the current block.
 
-    private Multicast multicast;
+    private List<Peer> peers;
+
+    // private Multicast multicast;
+    private Peer2Peer peer2Peer;
 
     private PowMinerThread minerThread;           // The thread for mining.
     private PowListenerThread listenerThread;     // The thread for sending and receiving message in network.
 
+    private Boolean genesisMiner;
+
     public PowMiner() {
-        this(Constants.OWNER_DEFAULT_NAME);
+        this(InetAddressUtils.getIP(), Constants.MINER_DEFAULT_TCP_PORT);
+        String ip = getIp();
+        if (ip != null && ip.equals(Constants.GENESIS_PEER_IP)) {
+            genesisMiner = true;
+        } else {
+            genesisMiner = false;
+        }
     }
 
-    public PowMiner(String name) {
-        super(InetAddressUtils.getIP(), name);
+    public PowMiner(String ip, Integer port) {
+        super(ip, port);
         this.blockchain = new Blockchain();
         this.transactionPool = new LinkedBlockingQueue<Transaction>();
         this.currTransactions = new ArrayList<Transaction>();
 
-        this.multicast = new Multicast();
+        // this.multicast = new Multicast();
+        this.peer2Peer = new Peer2Peer(port);
+
+        // TODO
+        this.peers = Constants.mockPeers();
+
+        /* Restart the miner thread and the listener thread */
+        minerThread = new PowMinerThread(this);           // Create a miner thread.
+        listenerThread = new PowListenerThread(this);     // Create a listener thread.
     }
 
-    public Block createBlockWithoutNonce() {
+    public synchronized Block createBlockWithoutNonce() {
         Block block = new Block();
         Integer length = blockchain.getMainChain().size();
 
@@ -63,9 +82,13 @@ public class PowMiner extends Peer {
         return block;
     }
 
-    public synchronized void appendBlock(Block block) {
+    public synchronized void appendBlock(Block block, Peer blockSrcPeer) {
         Integer length = blockchain.getMainChain().size();
         String sha265 = HashingUtils.sha256(blockchain.getLastBlock());
+
+        minerThread.stopMining();
+
+        printMainChain(block);
 
         /**
          * Try to append the newly-mined block into the main blockchain.
@@ -73,7 +96,8 @@ public class PowMiner extends Peer {
         if (sha265.equals(block.getPrevBlockHash())) {
             blockchain.getMainChain().add(block);
             currTransactions = new ArrayList<Transaction>(); // Empty current transaction list.
-            LOGGER.info("A new block have been appended after the main blockchain.");
+            minerThread.startMining();
+            LOGGER.info(InetAddressUtils.getIP() + " - A new block have been appended after the main blockchain.");
             return;
         }
 
@@ -81,13 +105,15 @@ public class PowMiner extends Peer {
          * If the newly-mined block can not be appended after the current blockchain,
          * multicast a chain-request message to get longer blockchain from other peers.
          */
-        Message chainRequestMsg = new Message(owner(), null, MessageType.CHAIN_REQUEST);
-        multicast.send(FastJsonUtils.getJsonString(chainRequestMsg).getBytes());
-        LOGGER.info("Sent blockchain request message.");
+        syncMainChain(blockSrcPeer);
     }
 
     public synchronized void replaceMainChain(List<Block> chain) {
-        blockchain.setMainChain(chain);
+        blockchain.replaceMainChain(chain);
+        System.err.println(InetAddressUtils.getIP() + " Finish sync blockchain.");
+        for (int i = 0; i < blockchain.getMainChain().size(); i++) {
+            System.err.println(i + " - " + HashingUtils.sha256(blockchain.getMainChain().get(i)));
+        }
     }
 
     public Boolean validateChain() {
@@ -108,18 +134,16 @@ public class PowMiner extends Peer {
         transactionPool.add(transaction);
     }
 
-    public Boolean mine() {
-        if (minerThread != null && minerThread.isRunning() && listenerThread != null && listenerThread.isRunning()) {
-            return true;
-        }
+    public void syncMainChain(Peer syncPeer) {
+        Message syncMsg = new Message(owner(), null, MessageType.CHAIN_REQUEST);
+//        multicast.send(FastJsonUtils.getJsonString(syncMsg).getBytes());
+        peer2Peer.send(syncMsg, syncPeer);
+        LOGGER.info(InetAddressUtils.getIP() + " - Sent blockchain sync message.");
+    }
 
-        /* Restart the miner thread and the listener thread */
-        minerThread = new PowMinerThread(this);           // Create a miner thread.
-        listenerThread = new PowListenerThread(this);     // Create a listener thread.
+    public void init() {
         minerThread.start();
         listenerThread.start();
-        LOGGER.info("Miner thread and listener thread started.");
-        return true;
     }
 
     public Long proofOfWork(Block block) {
@@ -128,6 +152,10 @@ public class PowMiner extends Peer {
 
         sha256 = Hashing.sha256().hashString(FastJsonUtils.getJsonString(block), StandardCharsets.UTF_8).toString();
         for (nonce = 0L; !isValidChain(sha256); nonce++) {
+            if (!minerThread.isRunning()) {
+                System.err.println(InetAddressUtils.getIP() + " - Abort mining.");
+                return -1L;
+            }
             sha256 = Hashing.sha256().hashString(FastJsonUtils.getJsonString(block) + nonce, StandardCharsets.UTF_8).toString();
         }
 
@@ -154,19 +182,44 @@ public class PowMiner extends Peer {
     }
 
     public void stopMining() {
-        minerThread.stopMining();
+        if (minerThread != null && minerThread.isRunning()) {
+            minerThread.stopMining();
+        }
     }
 
-    public void restartMining() {
-        minerThread.startMining();
+    public void startMining() {
+        if (minerThread != null && !minerThread.isRunning()) {
+            minerThread.startMining();
+        }
+    }
+
+    public void startListening() {
+        if (listenerThread != null && !listenerThread.isRunning()) {
+            listenerThread.startListening();
+        }
     }
 
     public Peer owner() {
-        return new Peer(getIp(), getName());
+        return new Peer(getIp(), getPort());
     }
 
     public Integer chainSize() {
         return blockchain.getMainChain().size();
+    }
+
+    private void printMainChain(Block block) {
+        System.err.println("---------------- current blockchain hash value -----------------");
+        for (int i = 0; i < blockchain.getMainChain().size(); i++) {
+            System.err.println(i + " - " + HashingUtils.sha256(blockchain.getMainChain().get(i)));
+        }
+        System.err.println("--------------------------------------------------------------------------------");
+        System.err.println("------- current block hash: " + HashingUtils.sha256(block) + " -------");
+        System.err.println("------- current block previous hash: " + block.getPrevBlockHash() + " -------");
+        System.err.println("--------------------------------------------------------------------------------\n");
+    }
+
+    public Boolean isGenesisMiner() {
+        return genesisMiner;
     }
 
     /*******************************************
@@ -213,11 +266,27 @@ public class PowMiner extends Peer {
         this.currTransactions = currTransactions;
     }
 
-    public Multicast getMulticast() {
-        return multicast;
+    public Peer2Peer getPeer2Peer() {
+        return peer2Peer;
     }
 
-    public void setMulticast(Multicast multicast) {
-        this.multicast = multicast;
+    public void setPeer2Peer(Peer2Peer peer2Peer) {
+        this.peer2Peer = peer2Peer;
     }
+
+    public List<Peer> getPeers() {
+        return peers;
+    }
+
+    public void setPeers(List<Peer> peers) {
+        this.peers = peers;
+    }
+
+    //    public Multicast getMulticast() {
+//        return multicast;
+//    }
+//
+//    public void setMulticast(Multicast multicast) {
+//        this.multicast = multicast;
+//    }
 }

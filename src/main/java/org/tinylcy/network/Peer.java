@@ -1,12 +1,14 @@
 package org.tinylcy.network;
 
+import java.io.Serializable;
+
 /**
  * Created by tinylcy.
  */
-public class Peer {
+public class Peer implements Serializable{
 
     private String ip;
-    private String name;
+    private Integer port;
 
     public Peer() {
     }
@@ -15,9 +17,13 @@ public class Peer {
         this.ip = ip;
     }
 
-    public Peer(String ip, String name) {
+    public Peer(Integer port) {
+        this.port = port;
+    }
+
+    public Peer(String ip, Integer port) {
         this.ip = ip;
-        this.name = name;
+        this.port = port;
     }
 
     public String getIp() {
@@ -28,19 +34,19 @@ public class Peer {
         this.ip = ip;
     }
 
-    public String getName() {
-        return name;
+    public Integer getPort() {
+        return port;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setPort(Integer port) {
+        this.port = port;
     }
 
     @Override
     public String toString() {
         return "Peer{" +
                 "ip='" + ip + '\'' +
-                ", name='" + name + '\'' +
+                ", port=" + port +
                 '}';
     }
 }

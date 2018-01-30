@@ -6,7 +6,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.tinylcy.chain.Block;
+import org.tinylcy.config.Constants;
 import org.tinylcy.consensus.pow.PowMiner;
+import org.tinylcy.network.Peer;
 
 import java.util.List;
 
@@ -26,7 +28,15 @@ public class MinerController {
 
     @RequestMapping(value = "/mine", method = RequestMethod.GET)
     public @ResponseBody Boolean mine() {
-        return miner.mine();
+        miner.init();
+        if (!miner.isGenesisMiner()) {
+            miner.startListening();
+            miner.syncMainChain(new Peer(Constants.GENESIS_PEER_IP, Constants.GENESIS_PEER_PORT));
+        }else {
+            miner.startListening();
+            miner.startMining();
+        }
+        return true;
     }
 
     @RequestMapping(value = "/chain", method = RequestMethod.GET)

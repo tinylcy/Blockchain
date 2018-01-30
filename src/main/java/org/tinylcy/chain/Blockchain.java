@@ -23,6 +23,13 @@ public class Blockchain {
         mainChain.add(genesis);
     }
 
+    public void replaceMainChain(List<Block> chain) {
+        mainChain = new ArrayList<Block>(chain.size());
+        for(Block block: chain) {
+            mainChain.add(block);
+        }
+    }
+
     public Block getLastBlock() {
         return mainChain.get(mainChain.size() - 1);
     }
