@@ -2,6 +2,7 @@ package org.tinylcy.chain;
 
 import org.apache.log4j.Logger;
 import org.tinylcy.common.HashingUtils;
+import org.tinylcy.common.InetAddressUtils;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -33,7 +34,7 @@ public class Blockchain {
     /**
      * Append the newly-mined block after/into main chain or backup chains.
      * If appended, return {true}.
-     * If no where to append, return {false}
+     * If no where to append, return {false}.
      *
      * @param block
      * @return
@@ -75,6 +76,12 @@ public class Blockchain {
             String sha256 = HashingUtils.sha256(lastBlock);
             if (sha256.equals(block.getPrevBlockHash())) {
                 backupChain.add(block);
+                if (backupChain.size() > mainChain.size()) {
+                    List<Block> tmpChain = mainChain;
+                    mainChain = backupChain;
+                    backupChain = tmpChain;
+                    LOGGER.info(InetAddressUtils.getIP() + " - Swap main chain and backup chain.");
+                }
                 return true;
             }
         }
@@ -89,10 +96,12 @@ public class Blockchain {
             if (sha256.equals(block.getPrevBlockHash())) {
                 List<Block> backupChain = createBackupChain(prevBlock);
                 backupChain.add(block);
+                // TODO: remove
                 if (backupChain.size() > mainChain.size()) {
-                    List<Block> tmp = mainChain;
-                    mainChain = backupChain;
-                    backupChain = tmp;
+                    List<Block> tmpChain = backupChain;
+                    backupChain = mainChain;
+                    mainChain = tmpChain;
+                    LOGGER.info(InetAddressUtils.getIP() + " - Swap main chain and backup chain.");
                 }
                 backupChains.add(backupChain);
                 return true;
