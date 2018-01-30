@@ -27,14 +27,18 @@ public class MinerController {
     }
 
     @RequestMapping(value = "/mine", method = RequestMethod.GET)
-    public @ResponseBody Boolean mine() {
+    public
+    @ResponseBody
+    Boolean mine() {
         miner.init();
-        if (!miner.isGenesisMiner()) {
-            miner.startListening();
-            miner.syncMainChain(new Peer(Constants.GENESIS_PEER_IP, Constants.GENESIS_PEER_PORT));
-        }else {
-            miner.startListening();
+        if (miner.isGenesisMiner()) {
+            miner.startMsgListening();
+            miner.startTransListening();
             miner.startMining();
+        } else {
+            miner.startMsgListening();
+            miner.startTransListening();
+            miner.syncMainChain(new Peer(Constants.GENESIS_PEER_IP, Constants.MINER_DEFAULT_TCP_PORT));
         }
         return true;
     }

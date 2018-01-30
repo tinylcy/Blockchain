@@ -31,8 +31,9 @@ public class Multicast {
         }
     }
 
-    public void send(byte[] bytes) {
+    public void send(String data) {
         try {
+            byte[] bytes = data.getBytes();
             sendSocket.send(new DatagramPacket(bytes, bytes.length, group, Constants.MULTICAST_GROUP_PORT));
         } catch (UnknownHostException e) {
             e.printStackTrace();
@@ -41,13 +42,14 @@ public class Multicast {
         }
     }
 
-    public byte[] receive() {
+    public String receive() {
         byte[] buffer = new byte[2048];
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
         try {
             receiveSocket.receive(packet);
             byte[] data = Arrays.copyOfRange(buffer, 0, packet.getLength());
-            return data;
+            String result = new String(data);
+            return result;
         } catch (SocketException e) {
             e.printStackTrace();
         } catch (IOException e) {

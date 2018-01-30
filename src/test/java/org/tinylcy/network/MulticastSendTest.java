@@ -13,9 +13,9 @@ public class MulticastSendTest {
     @Test
     public void testSendSomething() {
         Something thing = new Something("tinylcy", 24);
-        byte[] bytes = FastJsonUtils.getJsonString(thing).getBytes();
+        String data = FastJsonUtils.getJsonString(thing);
         Multicast multicast = new Multicast();
-        multicast.send(bytes);
+        multicast.send(data);
     }
 
     @Test

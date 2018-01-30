@@ -1,5 +1,8 @@
 package org.tinylcy.network;
 
+import org.tinylcy.common.InetAddressUtils;
+import org.tinylcy.config.Constants;
+
 import java.io.Serializable;
 
 /**
@@ -15,9 +18,11 @@ public class Peer implements Serializable{
 
     public Peer(String ip) {
         this.ip = ip;
+        this.port = Constants.MINER_DEFAULT_TCP_PORT;
     }
 
     public Peer(Integer port) {
+        this.ip = InetAddressUtils.getIP();
         this.port = port;
     }
 

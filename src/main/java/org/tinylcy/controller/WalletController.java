@@ -9,7 +9,10 @@ import org.tinylcy.chain.Transaction;
 import org.tinylcy.common.FastJsonUtils;
 import org.tinylcy.common.InetAddressUtils;
 import org.tinylcy.config.Constants;
-import org.tinylcy.network.*;
+import org.tinylcy.network.Message;
+import org.tinylcy.network.MessageType;
+import org.tinylcy.network.Multicast;
+import org.tinylcy.network.Peer;
 
 /**
  * Created by tinylcy.
@@ -19,10 +22,10 @@ public class WalletController {
 
     private static final Logger LOGGER = Logger.getLogger(WalletController.class);
 
-    private static Multicast multicast;
+   private static Multicast multicast;
 
     static {
-        multicast = new Multicast();
+       multicast = new Multicast();
     }
 
     @RequestMapping(value = "/transaction", method = RequestMethod.POST)
@@ -31,9 +34,8 @@ public class WalletController {
 
         Transaction transaction = new Transaction(sender, recipient, amount);
         Peer owner = new Peer(InetAddressUtils.getIP(), Constants.MINER_DEFAULT_TCP_PORT);
-        Message msg = new Message(owner, transaction, MessageType.TRANSACTION);  // Construct a transaction type message.
-        multicast.send(FastJsonUtils.getJsonString(msg).getBytes());
-
+        Message msg = new Message(owner, transaction, MessageType.TRANSACTION);
+        multicast.send(FastJsonUtils.getJsonString(msg));
         LOGGER.info("Multicast transaction: " + transaction);
     }
 

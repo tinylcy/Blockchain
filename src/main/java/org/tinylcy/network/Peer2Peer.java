@@ -1,5 +1,7 @@
 package org.tinylcy.network;
 
+import org.tinylcy.config.Constants;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -13,15 +15,15 @@ public class Peer2Peer {
 
     private ServerSocket serverSocket;
 
-    public Peer2Peer(Integer port) {
+    public Peer2Peer() {
         try {
-            serverSocket = new ServerSocket(port);
+            serverSocket = new ServerSocket(Constants.MINER_DEFAULT_TCP_PORT);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void send(Message msg, Peer server) {
+    public void send(String msg, Peer server) {
         Socket socket = null;
         ObjectOutputStream output = null;
         try {
@@ -36,15 +38,15 @@ public class Peer2Peer {
         }
     }
 
-    public Message receive() {
+    public String receive() {
         Socket client = null;
         ObjectInputStream input = null;
-        Message msg = null;
+        String msg = null;
 
         try {
             client = serverSocket.accept();
             input = new ObjectInputStream(client.getInputStream());
-            msg = (Message) input.readObject();
+            msg = (String) input.readObject();
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {

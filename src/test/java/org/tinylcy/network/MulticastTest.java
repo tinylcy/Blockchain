@@ -11,14 +11,14 @@ public class MulticastTest {
 
     public void testMulticast() throws Exception {
         final Something thing = new Something("tinylcy", 24);
-        final byte[] bytes = FastJsonUtils.getJsonString(thing).getBytes();
+        final String data = FastJsonUtils.getJsonString(thing);
 
         final Multicast multicast = new Multicast();
 
         Thread sender = new Thread(new Runnable() {
             @Override
             public void run() {
-                multicast.send(bytes);
+                multicast.send(data);
             }
         });
 

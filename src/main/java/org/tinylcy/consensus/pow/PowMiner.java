@@ -9,10 +9,7 @@ import org.tinylcy.common.FastJsonUtils;
 import org.tinylcy.common.HashingUtils;
 import org.tinylcy.common.InetAddressUtils;
 import org.tinylcy.config.Constants;
-import org.tinylcy.network.Message;
-import org.tinylcy.network.MessageType;
-import org.tinylcy.network.Peer;
-import org.tinylcy.network.Peer2Peer;
+import org.tinylcy.network.*;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
@@ -35,11 +32,12 @@ public class PowMiner extends Peer {
 
     private List<Peer> peers;
 
-    // private Multicast multicast;
+    private Multicast multicast;
     private Peer2Peer peer2Peer;
 
-    private PowMinerThread minerThread;           // The thread for mining.
-    private PowListenerThread listenerThread;     // The thread for sending and receiving message in network.
+    private PowBlockMiner blockMiner;           // The thread for mining.
+    private PowMessageListener msgListener;     // The thread for sending and receiving message in network.
+    private PowTransactionListener transListenr;
 
     private Boolean genesisMiner;
 
@@ -59,15 +57,16 @@ public class PowMiner extends Peer {
         this.transactionPool = new LinkedBlockingQueue<Transaction>();
         this.currTransactions = new ArrayList<Transaction>();
 
-        // this.multicast = new Multicast();
-        this.peer2Peer = new Peer2Peer(port);
+        this.multicast = new Multicast();
+        this.peer2Peer = new Peer2Peer();
 
         // TODO
         this.peers = Constants.mockPeers();
 
         /* Restart the miner thread and the listener thread */
-        minerThread = new PowMinerThread(this);           // Create a miner thread.
-        listenerThread = new PowListenerThread(this);     // Create a listener thread.
+        blockMiner = new PowBlockMiner(this);           // Create a miner thread.
+        msgListener = new PowMessageListener(this);     // Create a listener thread.
+        transListenr = new PowTransactionListener(this);
     }
 
     public synchronized Block createBlockWithoutNonce() {
@@ -86,7 +85,7 @@ public class PowMiner extends Peer {
         Integer length = blockchain.getMainChain().size();
         String sha265 = HashingUtils.sha256(blockchain.getLastBlock());
 
-        minerThread.stopMining();
+        blockMiner.stopMining();
 
         printMainChain(block);
 
@@ -96,7 +95,7 @@ public class PowMiner extends Peer {
         if (sha265.equals(block.getPrevBlockHash())) {
             blockchain.getMainChain().add(block);
             currTransactions = new ArrayList<Transaction>(); // Empty current transaction list.
-            minerThread.startMining();
+            blockMiner.startMining();
             LOGGER.info(InetAddressUtils.getIP() + " - A new block have been appended after the main blockchain.");
             return;
         }
@@ -137,13 +136,14 @@ public class PowMiner extends Peer {
     public void syncMainChain(Peer syncPeer) {
         Message syncMsg = new Message(owner(), null, MessageType.CHAIN_REQUEST);
 //        multicast.send(FastJsonUtils.getJsonString(syncMsg).getBytes());
-        peer2Peer.send(syncMsg, syncPeer);
+        peer2Peer.send(FastJsonUtils.getJsonString(syncMsg), syncPeer);
         LOGGER.info(InetAddressUtils.getIP() + " - Sent blockchain sync message.");
     }
 
     public void init() {
-        minerThread.start();
-        listenerThread.start();
+        blockMiner.start();
+        msgListener.start();
+        transListenr.start();
     }
 
     public Long proofOfWork(Block block) {
@@ -152,7 +152,7 @@ public class PowMiner extends Peer {
 
         sha256 = Hashing.sha256().hashString(FastJsonUtils.getJsonString(block), StandardCharsets.UTF_8).toString();
         for (nonce = 0L; !isValidChain(sha256); nonce++) {
-            if (!minerThread.isRunning()) {
+            if (!blockMiner.isRunning()) {
                 System.err.println(InetAddressUtils.getIP() + " - Abort mining.");
                 return -1L;
             }
@@ -164,8 +164,7 @@ public class PowMiner extends Peer {
 
     private List<Transaction> fetchTransactionsFromPool() {
         List<Transaction> transactions = new ArrayList<Transaction>();
-        int count = 0;
-        while (!transactionPool.isEmpty() && count < Constants.MAX_TRANSACTION_NUM_PER_BLOCK) {
+        while (!transactionPool.isEmpty()) {
             Transaction transaction = transactionPool.peek();
             transactionPool.remove();
             transactions.add(transaction);
@@ -182,20 +181,26 @@ public class PowMiner extends Peer {
     }
 
     public void stopMining() {
-        if (minerThread != null && minerThread.isRunning()) {
-            minerThread.stopMining();
+        if (blockMiner != null && blockMiner.isRunning()) {
+            blockMiner.stopMining();
         }
     }
 
     public void startMining() {
-        if (minerThread != null && !minerThread.isRunning()) {
-            minerThread.startMining();
+        if (blockMiner != null && !blockMiner.isRunning()) {
+            blockMiner.startMining();
         }
     }
 
-    public void startListening() {
-        if (listenerThread != null && !listenerThread.isRunning()) {
-            listenerThread.startListening();
+    public void startMsgListening() {
+        if (msgListener != null && !msgListener.isRunning()) {
+            msgListener.startListening();
+        }
+    }
+
+    public void startTransListening() {
+        if (transListenr != null && !transListenr.isRunning()) {
+            transListenr.startListening();
         }
     }
 
@@ -242,20 +247,29 @@ public class PowMiner extends Peer {
         this.transactionPool = transactionPool;
     }
 
-    public PowMinerThread getMinerThread() {
-        return minerThread;
+
+    public PowMessageListener getMsgListener() {
+        return msgListener;
     }
 
-    public void setMinerThread(PowMinerThread minerThread) {
-        this.minerThread = minerThread;
+    public void setMsgListener(PowMessageListener msgListener) {
+        this.msgListener = msgListener;
     }
 
-    public PowListenerThread getListenerThread() {
-        return listenerThread;
+    public PowTransactionListener getTransListenr() {
+        return transListenr;
     }
 
-    public void setListenerThread(PowListenerThread listenerThread) {
-        this.listenerThread = listenerThread;
+    public void setTransListenr(PowTransactionListener transListenr) {
+        this.transListenr = transListenr;
+    }
+
+    public PowBlockMiner getBlockMiner() {
+        return blockMiner;
+    }
+
+    public void setBlockMiner(PowBlockMiner blockMiner) {
+        this.blockMiner = blockMiner;
     }
 
     public List<Transaction> getCurrTransactions() {
@@ -282,11 +296,11 @@ public class PowMiner extends Peer {
         this.peers = peers;
     }
 
-    //    public Multicast getMulticast() {
-//        return multicast;
-//    }
-//
-//    public void setMulticast(Multicast multicast) {
-//        this.multicast = multicast;
-//    }
+    public Multicast getMulticast() {
+        return multicast;
+    }
+
+    public void setMulticast(Multicast multicast) {
+        this.multicast = multicast;
+    }
 }
