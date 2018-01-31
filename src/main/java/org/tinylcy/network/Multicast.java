@@ -1,11 +1,12 @@
 package org.tinylcy.network;
 
 import org.apache.log4j.Logger;
-import org.tinylcy.config.Constants;
+import org.tinylcy.common.ConfigurationUtils;
 
 import java.io.IOException;
 import java.net.*;
 import java.util.Arrays;
+import java.util.Properties;
 
 /**
  * Created by tinylcy.
@@ -13,6 +14,12 @@ import java.util.Arrays;
 public class Multicast {
 
     private static final Logger LOGGER = Logger.getLogger(Multicast.class);
+    private static Properties configProperties;
+
+    static {
+        configProperties = new Properties();
+        ConfigurationUtils.loadPeerConfig(configProperties);
+    }
 
     private InetAddress group;
     private MulticastSocket sendSocket;
@@ -20,9 +27,9 @@ public class Multicast {
 
     public Multicast() {
         try {
-            group = InetAddress.getByName(Constants.MULTICAST_GROUP_ADDRESS);
+            group = InetAddress.getByName(configProperties.getProperty("MULTICAST_GROUP_ADDRESS"));
             sendSocket = new MulticastSocket();
-            receiveSocket = new MulticastSocket(Constants.MULTICAST_GROUP_PORT);
+            receiveSocket = new MulticastSocket(Integer.parseInt(configProperties.getProperty("MULTICAST_GROUP_PORT")));
             receiveSocket.joinGroup(group);
         } catch (UnknownHostException e) {
             e.printStackTrace();
@@ -34,7 +41,8 @@ public class Multicast {
     public void send(String data) {
         try {
             byte[] bytes = data.getBytes();
-            sendSocket.send(new DatagramPacket(bytes, bytes.length, group, Constants.MULTICAST_GROUP_PORT));
+            Integer port = Integer.parseInt(configProperties.getProperty("MULTICAST_GROUP_PORT"));
+            sendSocket.send(new DatagramPacket(bytes, bytes.length, group, port));
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException e) {

@@ -45,6 +45,7 @@ public class Blockchain {
         // Try to append after the main chain.
         if (sha256.equals(block.getPrevBlockHash())) {
             mainChain.add(block);
+            clearOutOfDateBackupChains();    // Remove the out of data backup chains
             return true;
         }
 
@@ -56,15 +57,6 @@ public class Blockchain {
         // Try to append into the main chain, which will create a backup chain.
         if (appendIntoMainChain(block)) {
             return true;
-        }
-
-        // Remove the out of date chain.
-        Iterator<List<Block>> iterator = backupChains.iterator();
-        while (iterator.hasNext()) {
-            List<Block> backupChain = iterator.next();
-            if (mainChain.size() - backupChain.size() > 5) {
-                iterator.remove();
-            }
         }
 
         return false;
@@ -96,13 +88,15 @@ public class Blockchain {
             if (sha256.equals(block.getPrevBlockHash())) {
                 List<Block> backupChain = createBackupChain(prevBlock);
                 backupChain.add(block);
-                // TODO: remove
+
+                /* TODO: this is redundant. */
                 if (backupChain.size() > mainChain.size()) {
                     List<Block> tmpChain = backupChain;
                     backupChain = mainChain;
                     mainChain = tmpChain;
                     LOGGER.info(InetAddressUtils.getIP() + " - Swap main chain and backup chain.");
                 }
+
                 backupChains.add(backupChain);
                 return true;
             }
@@ -120,6 +114,17 @@ public class Blockchain {
         }
         backupChain.add(prevBlock);
         return backupChain;
+    }
+
+    private void clearOutOfDateBackupChains() {
+        // Remove the out of date chain.
+        Iterator<List<Block>> iterator = backupChains.iterator();
+        while (iterator.hasNext()) {
+            List<Block> backupChain = iterator.next();
+            if (mainChain.size() - backupChain.size() > 5) {
+                iterator.remove();
+            }
+        }
     }
 
     public void replaceMainChain(List<Block> chain) {

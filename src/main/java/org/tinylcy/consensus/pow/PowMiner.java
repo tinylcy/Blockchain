@@ -9,13 +9,13 @@ import org.tinylcy.common.ConfigurationUtils;
 import org.tinylcy.common.FastJsonUtils;
 import org.tinylcy.common.HashingUtils;
 import org.tinylcy.common.InetAddressUtils;
-import org.tinylcy.config.Constants;
 import org.tinylcy.network.*;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -25,6 +25,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class PowMiner extends Peer {
 
     private static final Logger LOGGER = Logger.getLogger(PowMiner.class);
+
+    private static Properties configProperties;    // Miner's configuration information.
 
     private Blockchain blockchain;                 // A blockchain the current miner maintained.
 
@@ -40,12 +42,17 @@ public class PowMiner extends Peer {
     private PowMessageListener msgListener;        // The thread for sending and receiving message (BLOCK, CHAIN_REQUEST and CHAIN_RESPONSE).
     private PowTransactionListener transListener;  // The thread for receiving transactions.
 
-    private Boolean genesisMiner;                  // Mark the first miner in blockchain network.
+    private Boolean genesisMiner;                  // Mark the Satoshi Nakamoto miner in blockchain network.
+
+    static {
+        configProperties = new Properties();
+        ConfigurationUtils.loadPeerConfig(configProperties);
+    }
 
     public PowMiner() {
-        this(InetAddressUtils.getIP(), Constants.MINER_DEFAULT_TCP_PORT);
+        this(InetAddressUtils.getIP(), Integer.parseInt(configProperties.getProperty("MINER_DEFAULT_TCP_PORT")));
         String ip = getIp();
-        if (ip != null && ip.equals(Constants.GENESIS_PEER_IP)) {
+        if (ip != null && ip.equals(configProperties.getProperty("GENESIS_PEER_IP"))) {
             genesisMiner = true;
         } else {
             genesisMiner = false;
@@ -211,6 +218,10 @@ public class PowMiner extends Peer {
 
     public List<List<Block>> getBackupChains() {
         return blockchain.getBackupChains();
+    }
+
+    public Properties getConfigProperties() {
+        return configProperties;
     }
 
     /*******************************************

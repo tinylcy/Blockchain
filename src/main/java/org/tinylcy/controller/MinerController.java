@@ -7,12 +7,12 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.tinylcy.chain.Block;
 import org.tinylcy.common.HashingUtils;
-import org.tinylcy.config.Constants;
 import org.tinylcy.consensus.pow.PowMiner;
 import org.tinylcy.network.Peer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 /**
  * Created by tinylcy.
@@ -24,14 +24,11 @@ public class MinerController {
 
     private static PowMiner miner;
 
-    static {
-        miner = new PowMiner();
-    }
-
     @RequestMapping(value = "/mine", method = RequestMethod.GET)
     public
     @ResponseBody
     Boolean mine() {
+        miner = new PowMiner();
         miner.init();
         if (miner.isGenesisMiner()) {
             miner.startMsgListening();
@@ -40,7 +37,8 @@ public class MinerController {
         } else {
             miner.startMsgListening();
             miner.startTransListening();
-            miner.syncMainChain(new Peer(Constants.GENESIS_PEER_IP, Constants.MINER_DEFAULT_TCP_PORT));
+            Properties config = miner.getConfigProperties();
+            miner.syncMainChain(new Peer(config.getProperty("GENESIS_PEER_IP"),Integer.parseInt(config.getProperty("MINER_DEFAULT_TCP_PORT"))));
         }
         return true;
     }
