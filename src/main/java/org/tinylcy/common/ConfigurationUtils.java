@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Properties;
 
 /**
- * Created by chenyang li.
+ * Created by tinylcy.
  */
 public class ConfigurationUtils {
 

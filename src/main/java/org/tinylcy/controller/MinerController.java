@@ -45,6 +45,9 @@ public class MinerController {
 
     @RequestMapping(value = "/chain", method = RequestMethod.GET)
     public List<BlockWrapper> chain() {
+        if (miner == null) {
+            return null;
+        }
         List<BlockWrapper> list = new ArrayList<BlockWrapper>();
         for (Block block : miner.getMainChain()) {
             list.add(new BlockWrapper(HashingUtils.sha256(block), block.getPrevBlockHash()));
@@ -54,6 +57,9 @@ public class MinerController {
 
     @RequestMapping(value = "/backup", method = RequestMethod.GET)
     public List<List<BlockWrapper>> backupChains() {
+        if (miner == null) {
+            return null;
+        }
         List<List<BlockWrapper>> lists = new ArrayList<List<BlockWrapper>>();
         List<List<Block>> backupChains = miner.getBackupChains();
 
